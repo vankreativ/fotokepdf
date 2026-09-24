@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Foto ke PDF</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#1c1b1a;
+    --panel:#242320;
+    --panel-2:#2b2a26;
+    --ink:#ede9e1;
+    --ink-dim:#a9a49b;
+    --amber:#e8a33d;
+    --amber-dim:#7a5a28;
+    --teal:#5b8c87;
+    --red:#c7563b;
+    --border:#3a3833;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+  }
+  .app{
+    max-width:1100px;
+    margin:0 auto;
+    padding:40px 24px 80px;
+  }
+  header{
+    margin-bottom:32px;
+    border-bottom:1px solid var(--border);
+    padding-bottom:24px;
+  }
+  h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:32px;
+    font-weight:600;
+    margin:0 0 8px;
+    letter-spacing:-0.01em;
+  }
+  header p{
+    color:var(--ink-dim);
+    font-size:15px;
+    margin:0;
+    max-width:520px;
+    line-height:1.5;
+  }
+  .layout{
+    display:grid;
+    grid-template-columns:280px 1fr;
+    gap:28px;
+    align-items:start;
+  }
+  @media (max-width:760px){
+    .layout{grid-template-columns:1fr;}
+  }
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:20px;
+  }
+  .sidebar > * + *{margin-top:20px;}
+  .field label{
+    display:block;
+    font-size:13px;
+    color:var(--ink-dim);
+    margin-bottom:8px;
+  }
+  .size-input{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    border-radius:7px;
+    padding:8px 12px;
+  }
+  .size-input input{
+    background:none;
+    border:none;
+    color:var(--ink);
+    font-family:'Space Grotesk',sans-serif;
+    font-size:18px;
+    font-weight:600;
+    width:100%;
+    outline:none;
+  }
+  .size-input span{
+    color:var(--ink-dim);
+    font-size:13px;
+  }
+  .upload-btn{
+    display:block;
+    width:100%;
+    text-align:center;
+    background:var(--panel-2);
+    border:1px dashed var(--border);
+    border-radius:8px;
+    padding:16px 10px;
+    color:var(--ink-dim);
+    font-size:13px;
+    cursor:pointer;
+    transition:border-color .15s ease, color .15s ease;
+  }
+  .upload-btn:hover{
+    border-color:var(--amber);
+    color:var(--ink);
+  }
+  input[type=file]{display:none;}
+  button.primary{
+    width:100%;
+    background:var(--amber);
+    color:#20180a;
+    border:none;
+    border-radius:8px;
+    padding:13px 10px;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600;
+    font-size:15px;
+    cursor:pointer;
+    transition:background .15s ease;
+  }
+  button.primary:disabled{
+    background:var(--amber-dim);
+    color:#8a8074;
+    cursor:not-allowed;
+  }
+  button.primary:not(:disabled):hover{background:#f2b256;}
+  .status{
+    font-size:13px;
+    color:var(--ink-dim);
+    line-height:1.6;
+    min-height:18px;
+  }
+  .status .num{color:var(--teal);font-family:'Space Grotesk',sans-serif;}
+  a.download{
+    display:block;
+    text-align:center;
+    background:var(--teal);
+    color:#0f201e;
+    text-decoration:none;
+    border-radius:8px;
+    padding:12px 10px;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600;
+    font-size:14px;
+  }
+  .hint{font-size:12px;color:var(--ink-dim);line-height:1.5;}
+
+  .grid-panel{min-height:400px;}
+  .empty-state{
+    height:400px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    color:var(--ink-dim);
+    border:1px dashed var(--border);
+    border-radius:8px;
+    text-align:center;
+    padding:20px;
+  }
+  .empty-state strong{
+    color:var(--ink);
+    font-family:'Space Grotesk',sans-serif;
+    font-size:17px;
+    font-weight:500;
+  }
+  .photo-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(150px,1fr));
+    gap:14px;
+  }
+  .thumb{
+    position:relative;
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    overflow:hidden;
+    cursor:grab;
+    transition:transform .12s ease, border-color .12s ease;
+  }
+  .thumb.dragging{opacity:0.4;}
+  .thumb.drag-over{border-color:var(--amber);}
+  .thumb img{
+    width:100%;
+    height:130px;
+    object-fit:cover;
+    display:block;
+  }
+  .thumb .meta{
+    padding:8px 10px;
+    font-size:11px;
+    color:var(--ink-dim);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:6px;
+  }
+  .thumb .idx{
+    position:absolute;
+    top:8px;
+    left:8px;
+    background:rgba(20,18,15,.75);
+    color:var(--amber);
+    font-family:'Space Grotesk',sans-serif;
+    font-size:12px;
+    font-weight:600;
+    width:22px;
+    height:22px;
+    border-radius:5px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .thumb .remove{
+    position:absolute;
+    top:8px;
+    right:8px;
+    background:rgba(20,18,15,.75);
+    color:var(--red);
+    border:none;
+    width:22px;
+    height:22px;
+    border-radius:5px;
+    font-size:14px;
+    line-height:1;
+    cursor:pointer;
+  }
+  .thumb .remove:hover{background:var(--red);color:#fff;}
+  .grid-footer{
+    margin-top:14px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .add-more{
+    font-size:13px;
+    color:var(--amber);
+    cursor:pointer;
+    background:none;
+    border:none;
+    padding:0;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Foto ke PDF</h1>
+    <p>Susun beberapa foto jadi satu file PDF. Atur ukuran akhir file sesuai kebutuhan &mdash; kompresi akan menyesuaikan otomatis.</p>
+  </header>
+
+  <div class="layout">
+    <div class="panel sidebar">
+      <div class="field">
+        <label>Tambah foto</label>
+        <label class="upload-btn" for="fileInput">Klik untuk pilih foto, atau tambah lagi kapan saja</label>
+        <input type="file" id="fileInput" accept="image/*" multiple>
+      </div>
+
+      <div class="field">
+        <label>Target ukuran file PDF</label>
+        <div class="size-input">
+          <input type="number" id="targetSize" value="5" min="0.1" step="0.1">
+          <span>MB</span>
+        </div>
+      </div>
+
+      <button class="primary" id="generateBtn" disabled>Buat PDF</button>
+
+      <div class="status" id="statusText"></div>
+
+      <div id="downloadArea"></div>
+
+      <p class="hint">Halaman PDF mengikuti ukuran asli tiap foto. Urutan foto = urutan halaman &mdash; geser thumbnail untuk mengubah urutan.</p>
+    </div>
+
+    <div class="panel grid-panel">
+      <div id="emptyState" class="empty-state">
+        <strong>Belum ada foto</strong>
+        <span>Pilih foto dari panel di kiri untuk mulai menyusun PDF</span>
+      </div>
+      <div class="photo-grid" id="photoGrid"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const { jsPDF } = window.jspdf;
+
+let photos = []; // {id, file, img (HTMLImageElement), url}
+let dragSrcIndex = null;
+
+const fileInput = document.getElementById('fileInput');
+const photoGrid = document.getElementById('photoGrid');
+const emptyState = document.getElementById('emptyState');
+const generateBtn = document.getElementById('generateBtn');
+const statusText = document.getElementById('statusText');
+const downloadArea = document.getElementById('downloadArea');
+const targetSizeInput = document.getElementById('targetSize');
+
+fileInput.addEventListener('change', async (e) => {
+  const files = Array.from(e.target.files);
+  for (const file of files) {
+    const url = URL.createObjectURL(file);
+    const img = await loadImage(url);
+    photos.push({ id: crypto.randomUUID(), file, img, url });
+  }
+  fileInput.value = '';
+  render();
+});
+
+function loadImage(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
+function render() {
+  emptyState.style.display = photos.length ? 'none' : 'flex';
+  generateBtn.disabled = photos.length === 0;
+  photoGrid.innerHTML = '';
+
+  photos.forEach((p, i) => {
+    const thumb = document.createElement('div');
+    thumb.className = 'thumb';
+    thumb.draggable = true;
+    thumb.dataset.index = i;
+
+    thumb.innerHTML = `
+      <div class="idx">${i + 1}</div>
+      <button class="remove" title="Hapus foto">&times;</button>
+      <img src="${p.url}" alt="Foto ${i + 1}">
+      <div class="meta"><span>${p.img.naturalWidth}&times;${p.img.naturalHeight}</span><span>${formatBytes(p.file.size)}</span></div>
+    `;
+
+    thumb.querySelector('.remove').addEventListener('click', () => {
+      photos.splice(i, 1);
+      render();
+    });
+
+    thumb.addEventListener('dragstart', () => {
+      dragSrcIndex = i;
+      thumb.classList.add('dragging');
+    });
+    thumb.addEventListener('dragend', () => {
+      thumb.classList.remove('dragging');
+    });
+    thumb.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      thumb.classList.add('drag-over');
+    });
+    thumb.addEventListener('dragleave', () => {
+      thumb.classList.remove('drag-over');
+    });
+    thumb.addEventListener('drop', (e) => {
+      e.preventDefault();
+      thumb.classList.remove('drag-over');
+      const destIndex = i;
+      if (dragSrcIndex === null || dragSrcIndex === destIndex) return;
+      const [moved] = photos.splice(dragSrcIndex, 1);
+      photos.splice(destIndex, 0, moved);
+      dragSrcIndex = null;
+      render();
+    });
+
+    photoGrid.appendChild(thumb);
+  });
+}
+
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+}
+
+function px2mm(px) {
+  return px * 25.4 / 96;
+}
+
+// Render one photo to a JPEG dataURL at given scale + quality
+function renderPhoto(photo, scale, quality) {
+  const w = Math.max(1, Math.round(photo.img.naturalWidth * scale));
+  const h = Math.max(1, Math.round(photo.img.naturalHeight * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, w, h);
+  ctx.drawImage(photo.img, 0, 0, w, h);
+  const dataUrl = canvas.toDataURL('image/jpeg', quality);
+  const bytes = Math.round((dataUrl.length - dataUrl.indexOf(',') - 1) * 0.75);
+  return { dataUrl, w, h, bytes };
+}
+
+function renderAll(scale, quality) {
+  return photos.map(p => renderPhoto(p, scale, quality));
+}
+
+async function buildPdf(targetMB) {
+  const targetBytes = targetMB * 1024 * 1024;
+  const overheadPerPage = 900; // rough jsPDF/JPEG-container overhead per page
+  const targetImageBytes = Math.max(10000, targetBytes - overheadPerPage * photos.length);
+
+  let scale = 1;
+  let bestRender = null;
+
+  // Try up to 5 scale levels, each with a quality binary search
+  for (let scaleTry = 0; scaleTry < 6; scaleTry++) {
+    let lo = 0.05, hi = 0.95, result = null;
+    for (let iter = 0; iter < 7; iter++) {
+      const mid = (lo + hi) / 2;
+      const rendered = renderAll(scale, mid);
+      const total = rendered.reduce((s, r) => s + r.bytes, 0);
+      result = { rendered, total, quality: mid };
+      if (total > targetImageBytes) {
+        hi = mid;
+      } else {
+        lo = mid;
+      }
+      statusText.innerHTML = `Mengompres&hellip; skala <span class="num">${Math.round(scale*100)}%</span>, kualitas <span class="num">${Math.round(mid*100)}%</span>`;
+      await new Promise(r => setTimeout(r, 0));
+    }
+    bestRender = result;
+    if (result.total <= targetImageBytes || scale <= 0.15) {
+      break;
+    }
+    scale *= 0.75; // shrink dimensions and try again
+  }
+
+  return bestRender;
+}
+
+generateBtn.addEventListener('click', async () => {
+  if (!photos.length) return;
+  generateBtn.disabled = true;
+  downloadArea.innerHTML = '';
+  const targetMB = parseFloat(targetSizeInput.value) || 5;
+
+  statusText.textContent = 'Menyiapkan foto...';
+  await new Promise(r => setTimeout(r, 30));
+
+  const { rendered, total } = await buildPdf(targetMB);
+
+  statusText.textContent = 'Menyusun PDF...';
+  await new Promise(r => setTimeout(r, 30));
+
+  // jsPDF defaults to portrait orientation and will silently swap the
+  // width/height of a custom [w,h] format if it doesn't match "portrait"
+  // (width <= height). Without telling it the orientation explicitly,
+  // a landscape photo gets placed on a page whose dimensions were
+  // swapped back to portrait, so the image overflows and is cut off.
+  // Passing the correct orientation per page keeps every page exactly
+  // the size of its own photo, in its original orientation.
+  const pageOrientation = (w, h) => (w > h ? 'l' : 'p');
+
+  const doc = new jsPDF({
+    unit: 'mm',
+    orientation: pageOrientation(rendered[0].w, rendered[0].h),
+    format: [px2mm(rendered[0].w), px2mm(rendered[0].h)]
+  });
+
+  rendered.forEach((r, i) => {
+    const wmm = px2mm(r.w), hmm = px2mm(r.h);
+    if (i > 0) doc.addPage([wmm, hmm], pageOrientation(r.w, r.h));
+    doc.addImage(r.dataUrl, 'JPEG', 0, 0, wmm, hmm);
+  });
+
+  const blob = doc.output('blob');
+  const url = URL.createObjectURL(blob);
+  const finalMB = (blob.size / (1024 * 1024)).toFixed(2);
+
+  statusText.innerHTML = `Selesai &mdash; ukuran akhir <span class="num">${finalMB} MB</span> (target ${targetMB} MB), ${photos.length} halaman.`;
+
+  const a = document.createElement('a');
+  a.className = 'download';
+  a.href = url;
+  a.download = 'foto.pdf';
+  a.textContent = 'Unduh PDF';
+  downloadArea.appendChild(a);
+
+  generateBtn.disabled = false;
+});
+
+render();
+</script>
+</body>
+</html>
